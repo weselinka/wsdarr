@@ -112,6 +112,12 @@ wsdarr hlásí stažené soubory v `DOWNLOAD_DIR/complete/<kategorie>/<release>/
 musí tuto cestu vidět **pod stejnou cestou** (sdílený volume, jako v ukázkovém compose), nebo
 nastav *Settings → Download Clients → Remote Path Mappings*.
 
+**„No results in the configured categories“ při ukládání indexeru** – Sonarr/Radarr při testu chtějí
+aspoň jeden výsledek pro dotaz bez hledaného textu (RSS). wsdarr na něj vrací nejnovější videa
+z Webshare; když nenajde nic (Webshare nedostupný, špatné přihlášení), vrátí jednu zástupnou položku
+`wsdarr.indexer.placeholder`, kterou Sonarr/Radarr nikdy nestáhnou, a do logu zapíše varování
+`RSS: Webshare returned no usable videos…` – v tom případě zkontroluj přihlášení na stránce *Přehled*.
+
 ## Jak wsdarr hledá a pojmenovává
 
 * **Z ID na názvy.** Sonarr posílá `tvdbid` + `season` + `ep`, Radarr `tmdbid`/`imdbid`. wsdarr
@@ -174,6 +180,8 @@ i více instancí, např. `sonarr: [{name: sonarr-4k, url: ..., api_key: ..., ca
 | `MATCH_THRESHOLD` | `88` | minimální shoda názvu (0–100) |
 | `UNKNOWN_QUALITY` | `extension` | `extension` / `keep` (viz výše) |
 | `RSS_MODE` | `recent` | `recent` = RSS vrací nejnovější videa z Webshare, `off` = nic |
+| `RSS_FALLBACK_QUERIES` | `["1080p","720p","CZ"]` | dotazy pro RSS, když Webshare na prázdný dotaz nic nevrátí |
+| `RSS_PLACEHOLDER` | `true` | prázdné RSS nahradí jednou zástupnou položkou, aby šel indexer uložit |
 | `UI_USERNAME`, `UI_PASSWORD` | – | basic auth pro web UI |
 | `PUID`, `PGID`, `UMASK` | `1000`, `1000`, `002` | vlastník stažených souborů (Docker) |
 
@@ -199,7 +207,7 @@ wsdarr serve              # web server (výchozí příkaz kontejneru)
 * Denní (datumové) seriály a anime s absolutním číslováním zatím nejsou podporované.
 * Webshare API dokumentace nebyla při vývoji dostupná, implementace vychází z existujících
   klientů. Na reálném účtu ověř: přihlášení (*Přehled* ukáže VIP dny), hledání (*Hledání* v UI),
-  že test indexeru v Sonarru/Radarru projde (RSS dotaz bez hledaného textu musí něco vrátit),
+  že test indexeru v Sonarru/Radarru projde,
   stažení a import jednoho dílu a navázání přerušeného stahování (restart kontejneru během stahování).
 * Tvar dotazů na Webshare (`název S01E02` / `název 1x02` / samotný název) je potřeba doladit podle
   toho, jak Webshare vyhledávání reálně tokenizuje – příkaz `wsdarr search` ukáže, co se najde.

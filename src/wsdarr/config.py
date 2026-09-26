@@ -91,6 +91,11 @@ class Settings(BaseSettings):
     rss_mode: Literal["recent", "off"] = "recent"
     rss_query: str = ""
     rss_limit: int = 50
+    # Queries tried (newest first) when the empty RSS query returns nothing.
+    rss_fallback_queries: list[str] = Field(default_factory=lambda: ["1080p", "720p", "CZ"])
+    # Answer an empty RSS feed with one unparseable placeholder item, so that Sonarr/Radarr accept
+    # the indexer ("no results in the configured categories" otherwise blocks saving it).
+    rss_placeholder: bool = True
     release_group: str = "WS"
     # "extension": give files without quality markers the quality Sonarr/Radarr assign from the
     # file extension (instead of "Unknown", which default profiles reject); "keep": leave unknown.

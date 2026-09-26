@@ -138,8 +138,15 @@ class SearchService:
         """Newest videos on Webshare (used for RSS sync and the indexer test)."""
         if self.settings.rss_mode == "off":
             return []
-        files = await self._fetch(self.settings.rss_query, 1, sort="recent")
-        return self.filter_files(files[: self.settings.rss_limit], None)
+        # Webshare may not answer an empty query, so fall back to generic ones.
+        queries = [self.settings.rss_query, *self.settings.rss_fallback_queries]
+        for query in dict.fromkeys(queries):
+            files = await self._fetch(query, 1, sort="recent")
+            releases = self.filter_files(files[: self.settings.rss_limit], None)
+            if releases:
+                return releases
+        log.warning("RSS: Webshare returned no usable videos for queries %s", list(dict.fromkeys(queries)))
+        return []
 
     def filter_files(self, files: list[WsFile], ctx: MediaContext | None) -> list[Release]:
         min_size = self.settings.min_file_size_mb * MB

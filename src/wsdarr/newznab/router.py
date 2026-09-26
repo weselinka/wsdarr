@@ -108,6 +108,8 @@ async def handle(svc, params: dict[str, str]) -> Response:
 
     if not any([q, tvdb_id, tmdb_id, imdb_id]):
         releases = _filter_by_categories(await svc.search.recent(), cats)
+        if not releases and svc.settings.rss_placeholder:
+            releases = [placeholder_release(kind, cats)]
     else:
         season = _int(season_raw) if season_raw is not None else None
         episode = _int(ep_raw)
@@ -123,6 +125,23 @@ async def handle(svc, params: dict[str, str]) -> Response:
         releases = await svc.search.search(ctx) if ctx.titles else []
 
     return _rss(svc, releases[offset : offset + limit], offset, len(releases))
+
+
+def placeholder_release(kind: Kind, cats: list[int]) -> Release:
+    """A single RSS item for when Webshare returns nothing.
+
+    Sonarr/Radarr refuse to save an indexer whose RSS feed is empty. The title cannot be parsed
+    as an episode or a movie (no season/episode, no year), so they never grab it.
+    """
+    if kind == "unknown":
+        kind = "tv" if cats and all(5000 <= c < 6000 for c in cats) else "movie"
+    return Release(
+        ident="wsdarr-placeholder",
+        title="wsdarr.indexer.placeholder",
+        ws_name="Webshare returned no results for the RSS feed (see wsdarr log)",
+        size=1,
+        kind=kind,
+    )
 
 
 def nzb_link(svc, release: Release) -> str:
