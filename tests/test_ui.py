@@ -7,6 +7,11 @@ async def test_dashboard(client):
     assert "Přihlášen" in resp.text
     assert "42" in resp.text  # VIP days from fake Webshare
     assert "sonarr" in resp.text
+    # Setup guide for Sonarr/Radarr derived from PUBLIC_URL
+    assert "<code>wsdarr</code> / <code>9797</code>" in resp.text
+    assert "http://wsdarr:9797/newznab" in resp.text
+    assert "<code>sabnzbd</code>" in resp.text
+    assert "testkey" in resp.text
 
 
 async def test_root_redirects_to_ui(client):
@@ -48,12 +53,9 @@ async def test_queue_page_and_actions(client, services):
     assert services.db.job_get(job.nzo_id) is None
 
 
-async def test_settings_setup_and_tests(client, services):
-    services.prowlarr = None
+async def test_settings_and_connection_test(client, services):
     page = await client.get("/ui/settings")
-    assert "Auto-setup" in page.text
-    report = await client.post("/ui/setup", headers=HX)
-    assert "created" in report.text
+    assert "Test spojení" in page.text
     tests = await client.post("/ui/settings/test", headers=HX)
     assert "OK" in tests.text
 
@@ -68,8 +70,7 @@ async def test_basic_auth(client, services):
 
 
 async def test_post_without_htmx_header_is_rejected(client, services):
-    services.prowlarr = None
-    resp = await client.post("/ui/setup")
+    resp = await client.post("/ui/settings/test")
     assert resp.status_code == 403
     resp = await client.post("/ui/queue/pause")
     assert resp.status_code == 403

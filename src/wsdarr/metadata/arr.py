@@ -1,4 +1,4 @@
-"""Minimal async clients for the Sonarr/Radarr (API v3) and Prowlarr (API v1) REST APIs."""
+"""Minimal async client for the Sonarr/Radarr REST API (v3)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from ..config import ArrInstance
 
 log = logging.getLogger(__name__)
 
-ArrKind = Literal["sonarr", "radarr", "prowlarr"]
+ArrKind = Literal["sonarr", "radarr"]
 
 
 class ArrError(Exception):
@@ -23,7 +23,7 @@ class ArrClient:
         self.instance = instance
         self.kind = kind
         self._http = http
-        self.api_version = "v1" if kind == "prowlarr" else "v3"
+        self.api_version = "v3"
 
     @property
     def name(self) -> str:

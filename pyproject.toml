@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "wsdarr"
 version = "0.1.0"
-description = "wsdarr (Webshare downloadarr): Webshare.cz indexer (Newznab) and download client (SABnzbd API) for Sonarr/Radarr/Prowlarr"
+description = "wsdarr (Webshare downloadarr): Webshare.cz indexer (Newznab) and download client (SABnzbd API) for Sonarr/Radarr"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

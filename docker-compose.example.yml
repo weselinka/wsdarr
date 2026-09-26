@@ -1,6 +1,9 @@
-# wsdarr (Webshare downloadarr) + Prowlarr + Sonarr + Radarr – example stack.
+# wsdarr (Webshare downloadarr) + Sonarr + Radarr – example stack.
 # All containers that touch downloads must see the same path (/data here) so Sonarr/Radarr
 # can import what wsdarr downloads (hardlinks work when media lives on the same volume).
+#
+# After the first start get the wsdarr API key with:  docker exec wsdarr wsdarr apikey
+# and add wsdarr to Sonarr/Radarr as described in the README.
 services:
   wsdarr:
     image: ghcr.io/weselinka/wsdarr:latest
@@ -12,35 +15,24 @@ services:
       TZ: Europe/Prague
       WEBSHARE_USERNAME: "muj-ucet"
       WEBSHARE_PASSWORD: "moje-heslo"
-      # How Sonarr/Radarr/Prowlarr reach wsdarr (container name on the shared network).
+      # How Sonarr/Radarr reach wsdarr (container name on the shared network).
       PUBLIC_URL: http://wsdarr:9797
       DOWNLOAD_DIR: /data/downloads/webshare
+      # Optional: fixed API key instead of a generated one.
+      # WSDARR_API_KEY: "..."
       # Optional: Czech titles from TMDB (free API key at themoviedb.org).
       # TMDB_API_KEY: "..."
-      # Used for metadata lookups and the automatic setup (Settings > General > API Key in each app).
+      # Titles for searching + instant import after a download
+      # (Settings > General > API Key in Sonarr/Radarr).
       SONARR_URL: http://sonarr:8989
       SONARR_API_KEY: "..."
       RADARR_URL: http://radarr:7878
       RADARR_API_KEY: "..."
-      PROWLARR_URL: http://prowlarr:9696
-      PROWLARR_API_KEY: "..."
-      # Register indexer + download client in Prowlarr/Sonarr/Radarr on every start (idempotent).
-      AUTO_SETUP: "true"
     volumes:
       - ./config/wsdarr:/config
       - ./data:/data
     ports:
       - "9797:9797"
-
-  prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
-    container_name: prowlarr
-    restart: unless-stopped
-    environment: { PUID: "1000", PGID: "1000", TZ: Europe/Prague }
-    volumes:
-      - ./config/prowlarr:/config
-    ports:
-      - "9696:9696"
 
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest

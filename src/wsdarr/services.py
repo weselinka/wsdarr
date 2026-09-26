@@ -28,7 +28,6 @@ class Services:
     webshare: WebshareClient
     sonarrs: list[ArrClient]
     radarrs: list[ArrClient]
-    prowlarr: ArrClient | None
     tmdb: TmdbClient | None
     resolver: MetadataResolver
     search: SearchService
@@ -88,7 +87,6 @@ def build_services(
     )
     sonarrs = [ArrClient(i, "sonarr", http) for i in settings.sonarr]
     radarrs = [ArrClient(i, "radarr", http) for i in settings.radarr]
-    prowlarr = ArrClient(settings.prowlarr, "prowlarr", http) if settings.prowlarr else None
     tmdb = None
     if settings.tmdb_api_key or settings.tmdb_token:
         tmdb = TmdbClient(
@@ -108,7 +106,6 @@ def build_services(
         webshare=webshare,
         sonarrs=sonarrs,
         radarrs=radarrs,
-        prowlarr=prowlarr,
         tmdb=tmdb,
         resolver=resolver,
         search=search,
