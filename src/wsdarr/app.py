@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -18,6 +19,13 @@ from .services import Services, build_services
 from .webshare import WebshareError
 
 log = logging.getLogger(__name__)
+
+# Options of earlier versions that no longer do anything (Prowlarr and the auto-setup were removed).
+REMOVED_OPTIONS = ("AUTO_SETUP", "PROWLARR_URL", "PROWLARR_API_KEY")
+
+
+def removed_options(environ=os.environ) -> list[str]:
+    return [name for name in REMOVED_OPTIONS if environ.get(name)]
 
 
 async def _startup_tasks(svc: Services) -> None:
@@ -41,6 +49,11 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         log.info("wsdarr %s started", __version__)
         log.info("API key for Sonarr/Radarr (indexer + download client): %s", svc.api_key)
         log.info("Show it again any time with: docker exec wsdarr wsdarr apikey")
+        for name in removed_options():
+            log.warning(
+                "%s is no longer supported and is ignored: add wsdarr to Sonarr/Radarr by hand (see README)",
+                name,
+            )
         task = asyncio.create_task(_startup_tasks(svc))
         try:
             yield

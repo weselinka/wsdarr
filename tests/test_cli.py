@@ -56,3 +56,13 @@ def test_apikey_while_server_running(env, capsys):
     assert main(["apikey"]) == 0
     assert capsys.readouterr().out.strip() == "live-key"
     db.close()
+
+
+def test_removed_options_are_reported():
+    from wsdarr.app import removed_options
+
+    assert removed_options({"AUTO_SETUP": "true", "PROWLARR_URL": "http://p", "SONARR_URL": "x"}) == [
+        "AUTO_SETUP",
+        "PROWLARR_URL",
+    ]
+    assert removed_options({"AUTO_SETUP": ""}) == []

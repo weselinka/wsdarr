@@ -71,10 +71,14 @@ def endpoint(public_url: str) -> dict:
     parts = urlsplit(public_url)
     ssl = parts.scheme == "https"
     prefix = parts.path.strip("/")
+    try:
+        port = parts.port
+    except ValueError:  # e.g. "http://wsdarr:abc" – show something instead of failing the page
+        port = None
     return {
         "url": public_url.rstrip("/"),
         "host": parts.hostname or "localhost",
-        "port": parts.port or (443 if ssl else 80),
+        "port": port or (443 if ssl else 80),
         "ssl": ssl,
         "url_base": "/".join(p for p in (prefix, "sabnzbd") if p),
     }

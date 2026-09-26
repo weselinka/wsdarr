@@ -98,3 +98,10 @@ async def test_basic_auth_non_ascii_password(client, services):
     services.settings.ui_password = "heslo-ěšč"
     assert (await client.get("/ui/", auth=("admin", "spatne-ěšč"))).status_code == 401
     assert (await client.get("/ui/", auth=("admin", "heslo-ěšč"))).status_code == 200
+
+
+async def test_dashboard_survives_invalid_public_url(client, services):
+    services.settings.public_url = "http://wsdarr:abc"
+    resp = await client.get("/ui/")
+    assert resp.status_code == 200
+    assert "<code>wsdarr</code> / <code>80</code>" in resp.text
