@@ -233,11 +233,12 @@ class DownloadManager:
     # --- workers -------------------------------------------------------------------------
     async def _next_job(self) -> Job | None:
         async with self._pick_lock:
-            if self.paused:
-                return None
+            paused = self.paused
             now = time.time()
             for job in self.db.jobs_queue():
                 if job.paused or job.status != QUEUED or job.nzo_id in self._active:
+                    continue
+                if paused and job.priority != 2:  # like SABnzbd, "Force" ignores the global pause
                     continue
                 if self._retry_at.get(job.nzo_id, 0) > now:
                     continue

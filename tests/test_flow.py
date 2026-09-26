@@ -257,3 +257,25 @@ async def test_resume_uses_range(client, services, fake_ws, settings):
     assert final.read_bytes() == file_bytes("b1", 5_000_000)
     assert ("download", "b1", "bytes=1000000-") in fake_ws.state.calls
     assert job.nzo_id != job2.nzo_id
+
+
+async def test_force_priority_downloads_while_paused(client, services):
+    services.downloads.pause_all()
+    job = services.downloads.add(
+        ident="b3", name="Forced", category="movies", ws_name="x.avi", size=2_500_000, priority=2
+    )
+
+    async def done():
+        j = services.db.job_get(job.nzo_id)
+        return j if j and j.status == "Completed" else None
+
+    await wait_for(done)
+
+
+async def test_sab_bad_numeric_params(client):
+    resp = await client.get(
+        "/sabnzbd/api", params={"mode": "queue", "start": "x", "limit": "", "apikey": KEY}
+    )
+    assert resp.status_code == 200 and "queue" in resp.json()
+    resp = await client.get("/sabnzbd/api", params={"mode": "history", "limit": "abc", "apikey": KEY})
+    assert resp.status_code == 200 and "history" in resp.json()

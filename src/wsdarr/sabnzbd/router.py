@@ -50,6 +50,13 @@ def format_size(num: float) -> str:
     return f"{num:.1f} TB"
 
 
+def _to_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _ids(value: str | None) -> list[str]:
     return [v for v in (value or "").split(",") if v]
 
@@ -182,8 +189,8 @@ async def handle(svc, params: dict[str, Any]):
             downloads.resume_jobs(_ids(params.get("value")))
             return ok(nzo_ids=_ids(params.get("value")))
         jobs = _filter_category(downloads.db.jobs_queue(), params.get("category") or params.get("cat"))
-        start = int(params.get("start") or 0)
-        limit = int(params.get("limit") or 0)
+        start = _to_int(params.get("start"))
+        limit = _to_int(params.get("limit"))
         page = jobs[start : start + limit] if limit else jobs[start:]
         paused_all = downloads.paused
         slots = [queue_slot(svc, job, start + i, paused_all) for i, job in enumerate(page)]
@@ -221,8 +228,8 @@ async def handle(svc, params: dict[str, Any]):
             removed = downloads.delete(ids, delete_files=params.get("del_files") in ("1", 1, True))
             return ok(nzo_ids=removed)
         jobs = _filter_category(downloads.db.jobs_history(), params.get("category") or params.get("cat"))
-        start = int(params.get("start") or 0)
-        limit = int(params.get("limit") or 0)
+        start = _to_int(params.get("start"))
+        limit = _to_int(params.get("limit"))
         page = jobs[start : start + limit] if limit else jobs[start:]
         return JSONResponse(
             {

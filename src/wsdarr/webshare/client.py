@@ -95,10 +95,13 @@ class WebshareClient:
             )
         return root
 
-    async def login(self) -> str:
+    async def login(self, stale: str | None = None) -> str:
+        """Log in; with ``stale`` set, reuse a token another caller obtained while we waited."""
         if not self.has_credentials:
             raise WebshareError("NO_CREDENTIALS", "Webshare username/password not configured")
         async with self._login_lock:
+            if self._token and self._token != stale:
+                return self._token
             salt_root = await self._request("salt", {"username_or_email": self.username})
             salt = (salt_root.findtext("salt") or "").strip()
             if not salt:
@@ -121,7 +124,7 @@ class WebshareClient:
 
     async def _authed(self, endpoint: str, data: dict, require_login: bool = True) -> ET.Element:
         if self._token is None and self.has_credentials and require_login:
-            await self.login()
+            await self.login(stale=None)
         payload = dict(data)
         if self._token:
             payload["wst"] = self._token
@@ -136,7 +139,7 @@ class WebshareClient:
             ):
                 raise
             log.info("Webshare %s failed (%s), re-logging in and retrying", endpoint, exc)
-            await self.login()
+            await self.login(stale=payload.get("wst"))
             payload["wst"] = self._token
             return await self._request(endpoint, payload)
 

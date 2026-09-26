@@ -129,3 +129,14 @@ async def test_query_found_in_sonarr_library():
     assert ctx.source == "sonarr"
     assert ctx.canonical_title == "Breaking Bad"
     assert ctx.tvdb_id == 81189
+
+
+async def test_missing_item_is_not_cached_for_long():
+    resolver = make_resolver(with_tmdb=False)
+    ctx = await resolver.resolve("tv", tvdb_id=81189, season=1, episodes=[2])
+    assert ctx.titles == []
+    # The user adds the series to Sonarr afterwards: the next search must find it.
+    sonarr_app = resolver.sonarrs[0]._http._transport._transports["sonarr"].app
+    sonarr_app.state.data["library"].append({"id": 1, "title": "Breaking Bad", "year": 2008, "tvdbId": 81189})
+    ctx = await resolver.resolve("tv", tvdb_id=81189, season=1, episodes=[2])
+    assert ctx.canonical_title == "Breaking Bad"

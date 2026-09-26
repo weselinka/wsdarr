@@ -9,6 +9,7 @@ Run standalone::
 from __future__ import annotations
 
 import argparse
+import asyncio
 import hashlib
 import re
 import unicodedata
@@ -70,6 +71,7 @@ def create_fake_app(
 
     @app.post("/api/salt/")
     async def salt(username_or_email: str = Form(...)):
+        await asyncio.sleep(0.02)  # let concurrent callers overlap
         app.state.calls.append(("salt", username_or_email))
         if username_or_email != username:
             return err("SALT_FATAL_1", "User not found")

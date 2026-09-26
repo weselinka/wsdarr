@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
+import html
 import secrets
 import shutil
 import time
@@ -10,7 +13,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -27,17 +29,31 @@ templates.env.filters["size"] = format_size
 templates.env.filters["duration"] = lambda s: format_timeleft(s or 0)
 templates.env.filters["ts"] = lambda t: time.strftime("%d.%m.%Y %H:%M", time.localtime(t)) if t else ""
 
-basic = HTTPBasic(auto_error=False)
+
+def _basic_credentials(request: Request) -> tuple[str, str] | None:
+    # Parsed by hand: FastAPI's HTTPBasic only accepts ASCII, but passwords may contain diacritics.
+    scheme, _, param = request.headers.get("Authorization", "").partition(" ")
+    if scheme.lower() != "basic":
+        return None
+    try:
+        username, sep, password = base64.b64decode(param).decode("utf-8").partition(":")
+    except (binascii.Error, UnicodeDecodeError):
+        return None
+    return (username, password) if sep else None
 
 
-def ui_auth(request: Request, credentials: HTTPBasicCredentials | None = Depends(basic)) -> None:
+def ui_auth(request: Request) -> None:
     settings = request.app.state.svc.settings
+    if request.method == "POST" and request.headers.get("HX-Request") != "true":
+        # All UI actions are sent by htmx; a cross-site form cannot add this header (CSRF).
+        raise HTTPException(403, "Missing HX-Request header")
     if not settings.ui_username:
         return
+    credentials = _basic_credentials(request)
     if (
         credentials is None
-        or not secrets.compare_digest(credentials.username, settings.ui_username)
-        or not secrets.compare_digest(credentials.password, settings.ui_password or "")
+        or not secrets.compare_digest(credentials[0].encode(), settings.ui_username.encode())
+        or not secrets.compare_digest(credentials[1].encode(), (settings.ui_password or "").encode())
     ):
         raise HTTPException(401, "Unauthorized", headers={"WWW-Authenticate": 'Basic realm="wsdarr"'})
 
@@ -229,7 +245,7 @@ async def manual_download(
 ):
     svc = request.app.state.svc
     job = svc.downloads.add(ident=ident, name=title, category=category, ws_name=ws_name, size=size)
-    return HTMLResponse(f'<span class="badge ok">Přidáno do fronty ({job.category})</span>')
+    return HTMLResponse(f'<span class="badge ok">Přidáno do fronty ({html.escape(job.category)})</span>')
 
 
 @router.get("/settings", response_class=HTMLResponse)

@@ -79,3 +79,12 @@ async def test_user_data():
     client = make_client()
     data = await client.user_data()
     assert data["vip_days"] == "42"
+
+
+async def test_concurrent_requests_login_once():
+    import asyncio
+
+    app = create_fake_app()
+    client = make_client(app)
+    await asyncio.gather(*(client.file_link(i) for i in ("a1", "a2", "b1")))
+    assert sum(1 for c in app.state.calls if c[0] == "login") == 1

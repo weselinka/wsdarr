@@ -28,6 +28,9 @@ log = logging.getLogger(__name__)
 LOOKUP_TTL = 6 * 3600
 TMDB_TTL = 7 * 24 * 3600
 LIBRARY_TTL = 600
+# "Not found" answers are cached only briefly (TMDB) or not at all (local Sonarr/Radarr lookups):
+# Sonarr/Radarr search right after an item is added to the library.
+NEGATIVE_TTL = 300
 
 
 class MetadataResolver:
@@ -45,7 +48,7 @@ class MetadataResolver:
         self._library: dict[str, tuple[float, list[dict]]] = {}
 
     # --- helpers -------------------------------------------------------------------------
-    async def _cached(self, key: str, ttl: float, factory) -> Any:
+    async def _cached(self, key: str, ttl: float, factory, negative_ttl: float = 0) -> Any:
         cached = self.db.cache_get(key)
         if cached is not None:
             return cached.get("v")
@@ -54,7 +57,10 @@ class MetadataResolver:
         except (ArrError, httpx.HTTPError) as exc:
             log.warning("Metadata lookup %s failed: %s", key, exc)
             return None
-        self.db.cache_set(key, {"v": value}, ttl)
+        empty = not value or (isinstance(value, dict) and not any(value.values()))
+        if empty and not negative_ttl:
+            return value
+        self.db.cache_set(key, {"v": value}, negative_ttl if empty else ttl)
         return value
 
     async def _library_items(self, client: ArrClient) -> list[dict]:
@@ -138,7 +144,10 @@ class MetadataResolver:
                 if not ext_id:
                     continue
                 found = await self._cached(
-                    f"tmdb:find:{source}:{ext_id}", TMDB_TTL, lambda e=ext_id, s=source: tmdb.find(e, s)
+                    f"tmdb:find:{source}:{ext_id}",
+                    TMDB_TTL,
+                    lambda e=ext_id, s=source: tmdb.find(e, s),
+                    negative_ttl=NEGATIVE_TTL,
                 )
                 results = (found or {}).get("movie_results" if kind == "movie" else "tv_results") or []
                 if results:
@@ -149,13 +158,17 @@ class MetadataResolver:
                 f"tmdb:search:{kind}:{normalize(query)}:{ctx.year}",
                 TMDB_TTL,
                 lambda: tmdb.search(kind, query, ctx.year),
+                negative_ttl=NEGATIVE_TTL,
             )
             if results:
                 tmdb_id = results[0]["id"]
         if not tmdb_id:
             return None
         details = await self._cached(
-            f"tmdb:{kind}:{tmdb_id}:{tmdb.language}", TMDB_TTL, lambda: tmdb.details(kind, tmdb_id)
+            f"tmdb:{kind}:{tmdb_id}:{tmdb.language}",
+            TMDB_TTL,
+            lambda: tmdb.details(kind, tmdb_id),
+            negative_ttl=NEGATIVE_TTL,
         )
         if not details:
             return None
