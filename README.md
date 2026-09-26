@@ -1,16 +1,32 @@
-# wsdarr
+# wsdarr – **W**eb**s**hare **d**ownlo**a**d**arr**
 
-**Webshare.cz jako indexer a download client pro *arr stack** (Sonarr, Radarr, Prowlarr).
+**Stahování z [Webshare.cz](https://webshare.cz) přímo ze Sonarru a Radarru.**
 
-wsdarr se vůči *arr aplikacím tváří jako dvě standardní věci, které umí nativně:
+wsdarr je malá služba, která napojí Webshare.cz na *arr stack (Sonarr, Radarr, Prowlarr). Sonarr/Radarr
+pak na Webshare hledají a stahují stejně jako z jakéhokoli jiného zdroje: najdou díl nebo film, vyberou
+nejlepší verzi podle tvých quality profilů (rozlišení, CZ dabing, titulky…), wsdarr ji stáhne a
+Sonarr/Radarr ji automaticky naimportují do knihovny.
 
-* **Newznab indexer** – Prowlarr ho přidá jako „Generic Newznab“ a sám ho rozdistribuuje do
-  Sonarr/Radarr (nebo ho přidáš přímo do Sonarr/Radarr).
-* **SABnzbd download client** – Sonarr/Radarr mu pošlou vybraný release, wsdarr ho stáhne
-  z Webshare a Sonarr/Radarr ho přes *Completed Download Handling* automaticky naimportují.
+### Co umí
 
-Výběr nejlepšího releasu (quality profily, custom formaty, preferovaný jazyk…) tedy zůstává
-plně na Sonarru/Radarru – wsdarr jen zajistí, aby výsledky z Webshare měly názvy, kterým rozumí.
+* **Hledání na Webshare podle toho, co Sonarr/Radarr chtějí** – z ID seriálu/filmu zjistí anglické
+  i české názvy (Sonarr/Radarr, volitelně TMDB), prohledá Webshare a vyřadí nesprávné díly, roky,
+  samply a heslem chráněné soubory.
+* **Názvy, kterým *arr rozumí** – soubor `Perníkový táta S01E02 (CZ) 720p.avi` nabídne jako
+  `Breaking.Bad.S01E02.720p.CZ-WS`, včetně kvality a jazyka (CZ/SK dabing vs. titulky).
+* **Stahování** – fronta, souběžná stahování, navázání přerušeného stahování, opakování při chybě,
+  limit rychlosti; hotové soubory si Sonarr/Radarr samy naimportují.
+* **Automatické nastavení** – jedním příkazem se zaregistruje v Prowlarru, Sonarru i Radarru.
+* **Webové rozhraní** (česky) – stav Webshare účtu a VIP, fronta a historie, ruční hledání.
+
+### Jak to funguje
+
+wsdarr se vůči *arr aplikacím tváří jako dvě věci, které znají nativně – nic se v nich neupravuje
+ani neinstalují žádné pluginy:
+
+* **Newznab indexer** – Prowlarr ho přidá jako „Generic Newznab“ a rozdistribuuje do Sonarr/Radarr
+  (nebo ho přidáš přímo do Sonarr/Radarr).
+* **SABnzbd download client** – Sonarr/Radarr mu pošlou vybraný release a wsdarr ho stáhne z Webshare.
 
 ```
 Sonarr/Radarr ──(Newznab, přes Prowlarr nebo napřímo)──► wsdarr  /newznab/api?t=tvsearch&tvdbid=81189&season=1&ep=2
@@ -20,17 +36,21 @@ Sonarr vybere release podle profilu ─► stáhne „NZB“ (obálka s Webshare
 wsdarr stáhne soubor do /downloads/complete/tv/<release>/<release>.mkv ─► Sonarr naimportuje a položku smaže
 ```
 
+Potřebuješ **účet na Webshare.cz**; **VIP** je silně doporučený – bez něj je stahování pomalé a omezené.
+wsdarr neobchází žádná omezení Webshare, používá jeho oficiální API s tvým účtem.
+
 ## Rychlý start (Docker)
+
+Image: `ghcr.io/weselinka/wsdarr:latest`
 
 1. Zkopíruj [`docker-compose.example.yml`](docker-compose.example.yml), vyplň Webshare účet a API
    klíče Sonarr/Radarr/Prowlarr (*Settings → General → API Key* v každé aplikaci).
-2. V Prowlarru měj v *Settings → Apps* přidané Sonarr a Radarr (to je běžné nastavení Prowlarru).
-3. `docker compose up -d`
+2. V Prowlarru měj v *Settings → Apps* přidané Sonarr a Radarr (běžné nastavení Prowlarru).
+3. `docker compose pull && docker compose up -d`
 4. S `AUTO_SETUP=true` se wsdarr při startu sám zaregistruje (viz níže). Jinak spusť
    `docker compose exec wsdarr wsdarr setup` nebo tlačítko *Spustit auto-setup* ve web UI
    (`http://<host>:9797/`).
-
-Webshare **VIP účet** je silně doporučený – bez VIP je stahování pomalé a omezené.
+5. Pro české názvy doplň `TMDB_API_KEY` (zdarma na [themoviedb.org](https://www.themoviedb.org/settings/api)).
 
 ### Auto-setup
 

@@ -1,10 +1,9 @@
-# Example stack: wsdarr + Prowlarr + Sonarr + Radarr.
+# wsdarr (Webshare downloadarr) + Prowlarr + Sonarr + Radarr – example stack.
 # All containers that touch downloads must see the same path (/data here) so Sonarr/Radarr
 # can import what wsdarr downloads (hardlinks work when media lives on the same volume).
 services:
   wsdarr:
     image: ghcr.io/weselinka/wsdarr:latest
-    build: .
     container_name: wsdarr
     restart: unless-stopped
     environment:
