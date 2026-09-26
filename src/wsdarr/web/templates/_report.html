@@ -1,0 +1,11 @@
+<ul class="plain report">
+{% for e in report.as_dicts() %}
+  <li>
+    {% if e.action in ('created', 'updated') %}<span class="badge ok">{{ e.action }}</span>
+    {% elif e.action == 'ok' %}<span class="badge muted">ok</span>
+    {% elif e.action == 'error' %}<span class="badge err">chyba</span>
+    {% else %}<span class="badge warn">{{ e.action }}</span>{% endif %}
+    <strong>{{ e.target }}</strong> {{ e.detail }}
+  </li>
+{% endfor %}
+</ul>

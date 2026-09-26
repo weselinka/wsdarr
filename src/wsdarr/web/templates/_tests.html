@@ -1,0 +1,13 @@
+<ul class="plain report">
+  <li>
+    {% if webshare.ok %}<span class="badge ok">OK</span> <strong>Webshare</strong>
+      {{ webshare.data.username }}{% if webshare.data.vip == '1' %}, VIP {{ webshare.data.vip_days }} dní{% endif %}
+    {% else %}<span class="badge err">chyba</span> <strong>Webshare</strong> {{ webshare.error }}{% endif %}
+  </li>
+  {% for c in connections %}
+  <li>
+    {% if c.ok %}<span class="badge ok">OK</span>{% else %}<span class="badge err">chyba</span>{% endif %}
+    <strong>{{ c.name }}</strong> {{ c.url }} {% if c.ok %}v{{ c.data.version }}{% else %}– {{ c.error }}{% endif %}
+  </li>
+  {% endfor %}
+</ul>

@@ -1,0 +1,69 @@
+<div class="toolbar">
+  <h1>Fronta</h1>
+  {% if paused %}
+    <button hx-post="/ui/queue/resume" hx-target="#queue">Pokračovat</button>
+  {% else %}
+    <button hx-post="/ui/queue/pause" hx-target="#queue">Pozastavit vše</button>
+  {% endif %}
+</div>
+
+{% if not queue %}
+  <p class="muted">Fronta je prázdná.</p>
+{% else %}
+<table class="list">
+  <thead><tr><th>Název</th><th>Kategorie</th><th>Průběh</th><th>Rychlost</th><th>Zbývá</th><th></th></tr></thead>
+  <tbody>
+  {% for row in queue %}
+    {% set j = row.job %}
+    <tr>
+      <td><strong>{{ j.name }}</strong><div class="muted small">{{ j.ws_name }}</div>
+          {% if j.fail_message %}<div class="error small">{{ j.fail_message }} (pokus {{ j.attempts }})</div>{% endif %}</td>
+      <td>{{ j.category }}</td>
+      <td class="progress-cell">
+        <div class="progress"><div style="width: {{ row.percent }}%"></div></div>
+        <span class="small">{{ row.done|size }} / {{ j.size|size }} ({{ row.percent }} %)</span>
+        {% if j.paused %}<span class="badge warn">pozastaveno</span>{% elif j.status == 'Downloading' %}<span class="badge ok">stahuje</span>{% else %}<span class="badge muted">čeká</span>{% endif %}
+      </td>
+      <td>{{ row.speed|size }}/s</td>
+      <td>{{ row.eta|duration if row.eta else '' }}</td>
+      <td class="actions">
+        {% if j.paused %}
+          <button class="small" hx-post="/ui/jobs/{{ j.nzo_id }}/resume" hx-target="#queue">▶</button>
+        {% else %}
+          <button class="small" hx-post="/ui/jobs/{{ j.nzo_id }}/pause" hx-target="#queue">❚❚</button>
+        {% endif %}
+        <button class="small danger" hx-post="/ui/jobs/{{ j.nzo_id }}/delete" hx-target="#queue" hx-confirm="Smazat z fronty?">✕</button>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h2>Historie</h2>
+{% if not history %}
+  <p class="muted">Zatím nic.</p>
+{% else %}
+<table class="list">
+  <thead><tr><th>Název</th><th>Kategorie</th><th>Stav</th><th>Velikost</th><th>Dokončeno</th><th></th></tr></thead>
+  <tbody>
+  {% for row in history %}
+    {% set j = row.job %}
+    <tr>
+      <td><strong>{{ j.name }}</strong><div class="muted small">{{ j.storage or j.ws_name }}</div>
+          {% if j.status == 'Failed' %}<div class="error small">{{ j.fail_message }}</div>{% endif %}</td>
+      <td>{{ j.category }}</td>
+      <td>{% if j.status == 'Completed' %}<span class="badge ok">hotovo</span>{% else %}<span class="badge err">selhalo</span>{% endif %}</td>
+      <td>{{ (j.bytes_done or j.size)|size }}</td>
+      <td>{{ j.completed_at|ts }}</td>
+      <td class="actions">
+        {% if j.status == 'Failed' %}
+          <button class="small" hx-post="/ui/jobs/{{ j.nzo_id }}/retry" hx-target="#queue">↻</button>
+        {% endif %}
+        <button class="small danger" hx-post="/ui/jobs/{{ j.nzo_id }}/delete" hx-target="#queue" hx-confirm="Odebrat z historie (soubory zůstanou)?">✕</button>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}

@@ -119,7 +119,7 @@ LOTR = MediaContext(
             LOTR,
             "Pán prstenů - Návrat krále / The Return of the King (2003) CZ.avi",
             True,
-            "The.Lord.of.the.Rings.The.Return.of.the.King.2003.CZ-WS",
+            "The.Lord.of.the.Rings.The.Return.of.the.King.2003.SDTV.CZ-WS",
         ),
         (LOTR, "Pan prstenu - Spolecenstvo prstenu (2001) CZ.avi", False, None),
         (LOTR, "Breaking.Bad.S01E02.720p.mkv", False, None),
@@ -150,3 +150,18 @@ def test_untrusted_context_keeps_parsed_title():
     ctx = MediaContext(kind="movie", titles=["Pelíšky"], source="query")
     assert build_release_title(parsed, ctx) == "Pelisky.1999.1080p.CZ-WS"
     assert newznab_languages(parsed) == ["Czech"]
+
+
+@pytest.mark.parametrize(
+    ("name", "hint", "expected"),
+    [
+        ("Simpsonovi 12x05 CZ.avi", True, "Simpsonovi.S12E05.SDTV.CZ-WS"),
+        ("Simpsonovi 12x05 CZ.mkv", True, "Simpsonovi.S12E05.720p.HDTV.CZ-WS"),
+        ("Simpsonovi 12x05 CZ.mkv", False, "Simpsonovi.S12E05.CZ-WS"),
+        # Files that already carry a resolution or source get no hint.
+        ("Simpsonovi 12x05 1080p CZ.mkv", True, "Simpsonovi.S12E05.1080p.CZ-WS"),
+        ("Simpsonovi 12x05 DVDRip CZ.avi", True, "Simpsonovi.S12E05.DVDRip.CZ-WS"),
+    ],
+)
+def test_unknown_quality_hint(name, hint, expected):
+    assert build_release_title(parse_filename(name), None, quality_hint=hint) == expected

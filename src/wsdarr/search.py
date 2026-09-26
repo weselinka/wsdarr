@@ -177,7 +177,9 @@ class SearchService:
             releases.append(
                 Release(
                     ident=f.ident,
-                    title=build_release_title(parsed, ctx, self.settings.release_group),
+                    title=build_release_title(
+                        parsed, ctx, self.settings.release_group, self.settings.unknown_quality == "extension"
+                    ),
                     ws_name=f.name,
                     size=f.size,
                     kind=kind,

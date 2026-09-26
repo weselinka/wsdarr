@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Hledání{% endblock %}
+{% block content %}
+<h1>Hledání na Webshare</h1>
+<form class="search" method="get" action="/ui/search">
+  <input type="search" name="q" value="{{ q }}" placeholder="např. Breaking Bad S01E02, Pelíšky 1999" autofocus>
+  <select name="kind">
+    <option value="unknown" {{ 'selected' if kind == 'unknown' }}>Automaticky</option>
+    <option value="tv" {{ 'selected' if kind == 'tv' }}>Seriál</option>
+    <option value="movie" {{ 'selected' if kind == 'movie' }}>Film</option>
+  </select>
+  <label class="check"><input type="checkbox" name="raw" value="1" {{ 'checked' if raw }}> bez filtrování</label>
+  <button type="submit">Hledat</button>
+</form>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{% if ctx %}
+  <p class="muted small">
+    Rozpoznáno jako <strong>{{ {'tv': 'seriál', 'movie': 'film'}.get(ctx.kind, 'neurčeno') }}</strong>
+    ({{ ctx.source }}){% if ctx.canonical_title %}: {{ ctx.canonical_title }}{% endif %}{% if ctx.year %} ({{ ctx.year }}){% endif %}
+    {% if ctx.season is not none %} · S{{ '%02d' % ctx.season }}{% for e in ctx.episodes %}E{{ '%02d' % e }}{% endfor %}{% endif %}
+    · hledané názvy: {{ ctx.titles[:settings.max_alt_titles]|join(', ') }}
+  </p>
+{% endif %}
+
+{% if results is not none %}
+  {% if not results %}
+    <p class="muted">Nic nenalezeno.</p>
+  {% else %}
+  <table class="list">
+    <thead><tr><th>Release (jak ho uvidí Sonarr/Radarr)</th><th>Velikost</th><th>Jazyk</th><th>Hlasy</th><th>Stáhnout do</th></tr></thead>
+    <tbody>
+    {% for r in results %}
+      <tr>
+        <td><strong>{{ r.title }}</strong>
+          <div class="muted small"><a href="https://webshare.cz/#/file/{{ r.ident }}" target="_blank" rel="noopener">{{ r.ws_name }}</a>
+          {% if r.note %}<span class="badge warn">{{ r.note }}</span>{% endif %}</div></td>
+        <td>{{ r.size|size }}</td>
+        <td>{{ r.languages|join(', ') or '–' }}</td>
+        <td>{{ r.votes }}</td>
+        <td>
+          <form class="inline" hx-post="/ui/download" hx-swap="outerHTML">
+            <input type="hidden" name="ident" value="{{ r.ident }}">
+            <input type="hidden" name="title" value="{{ r.title }}">
+            <input type="hidden" name="ws_name" value="{{ r.ws_name }}">
+            <input type="hidden" name="size" value="{{ r.size }}">
+            <select name="category">
+              {% for c in settings.categories %}
+                <option value="{{ c }}" {{ 'selected' if (r.kind == 'tv' and c == settings.tv_category) or (r.kind == 'movie' and c == settings.movie_category) }}>{{ c }}</option>
+              {% endfor %}
+            </select>
+            <button class="small" type="submit">⤓</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+{% endif %}
+{% endblock %}

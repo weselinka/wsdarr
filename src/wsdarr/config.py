@@ -95,6 +95,9 @@ class Settings(BaseSettings):
     rss_query: str = ""
     rss_limit: int = 50
     release_group: str = "WS"
+    # "extension": give files without quality markers the quality Sonarr/Radarr assign from the
+    # file extension (instead of "Unknown", which default profiles reject); "keep": leave unknown.
+    unknown_quality: Literal["extension", "keep"] = "extension"
 
     # --- downloads -----------------------------------------------------------------------
     tv_category: str = "tv"

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Přehled{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <h1>Přehled</h1>
+  <a class="button" href="/ui/?refresh=1">Obnovit stav</a>
+</div>
+
+<section class="grid">
+  <div class="card">
+    <h2>Webshare účet</h2>
+    {% if webshare.ok %}
+      {% set u = webshare.data %}
+      <p><span class="badge ok">Přihlášen</span> {{ u.username or settings.webshare_username }}</p>
+      {% if u.vip == '1' %}
+        <p>VIP: <strong>{{ u.vip_days }}</strong> dní{% if u.vip_until %} (do {{ u.vip_until }}){% endif %}</p>
+      {% else %}
+        <p><span class="badge warn">Bez VIP</span> stahování bude pomalé nebo omezené.</p>
+      {% endif %}
+    {% else %}
+      <p><span class="badge err">Chyba</span> {{ webshare.error }}</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Stahování</h2>
+    <p>Ve frontě: <strong>{{ queue_count }}</strong>{% if paused %} <span class="badge warn">pozastaveno</span>{% endif %}</p>
+    <p>Rychlost: <strong>{{ speed|size }}/s</strong></p>
+    <p>Historie: {{ history_count }}{% if failed_count %} · <span class="badge err">{{ failed_count }} selhalo</span>{% endif %}</p>
+    <p>Volné místo: <strong>{{ disk_free|size if disk_free is not none else '?' }}</strong></p>
+  </div>
+
+  <div class="card">
+    <h2>Propojení</h2>
+    {% if not connections %}
+      <p class="muted">Sonarr/Radarr/Prowlarr nejsou nastaveny.</p>
+    {% endif %}
+    <ul class="plain">
+    {% for c in connections %}
+      <li>
+        {% if c.ok %}<span class="badge ok">OK</span>{% else %}<span class="badge err">Chyba</span>{% endif %}
+        <strong>{{ c.name }}</strong> <span class="muted">{{ c.url }}</span>
+        {% if c.ok %}<span class="muted">v{{ c.data.version }}</span>{% else %}<div class="error">{{ c.error }}</div>{% endif %}
+      </li>
+    {% endfor %}
+      <li>
+        {% if svc.tmdb %}<span class="badge ok">OK</span>{% else %}<span class="badge muted">vypnuto</span>{% endif %}
+        <strong>TMDB</strong> <span class="muted">české názvy ({{ settings.tmdb_language }})</span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Ruční napojení</h2>
+  <p class="muted">Auto-setup v <a href="/ui/settings">Nastavení</a> tohle udělá sám. Pro ruční nastavení:</p>
+  <table class="kv">
+    <tr><th>Indexer (Prowlarr „Generic Newznab“ / Sonarr/Radarr „Newznab“)</th>
+        <td><code>{{ settings.public_url.rstrip('/') }}/newznab</code>, API Path <code>/api</code></td></tr>
+    <tr><th>Download client (SABnzbd)</th>
+        <td>Host/port z <code>{{ settings.public_url }}</code>, URL Base <code>sabnzbd</code>,
+            kategorie <code>{{ settings.tv_category }}</code> / <code>{{ settings.movie_category }}</code></td></tr>
+    <tr><th>API klíč (indexer i klient)</th>
+        <td><details><summary>zobrazit</summary><code>{{ svc.api_key }}</code></details></td></tr>
+  </table>
+</section>
+{% endblock %}

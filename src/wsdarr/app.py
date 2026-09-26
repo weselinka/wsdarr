@@ -80,9 +80,11 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         svc = request.app.state.svc
         return {"status": "ok", "version": __version__, "webshare_logged_in": bool(svc.webshare.token)}
 
+    from .web.router import mount_static
     from .web.router import router as web_router
 
     app.include_router(web_router)
+    mount_static(app)
 
     @app.get("/", include_in_schema=False)
     async def root():

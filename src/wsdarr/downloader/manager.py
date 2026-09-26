@@ -99,7 +99,9 @@ class DownloadManager:
 
     async def start(self) -> None:
         self.settings.incomplete_dir.mkdir(parents=True, exist_ok=True)
-        self.settings.complete_dir.mkdir(parents=True, exist_ok=True)
+        # Sonarr/Radarr health checks expect the category folders to exist.
+        for category in self.settings.categories:
+            (self.settings.complete_dir / safe_name(category)).mkdir(parents=True, exist_ok=True)
         for job in self.db.jobs_queue():
             if job.status == DOWNLOADING:
                 self.db.job_update(job.nzo_id, status=QUEUED, speed=0)

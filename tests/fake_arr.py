@@ -158,7 +158,7 @@ def create_fake_arr(kind: str, library: list[dict] | None = None) -> FastAPI:
     async def indexer_schema():
         items = [_schema_indexer(copy.deepcopy(indexer_fields))]
         if kind == "prowlarr":
-            items[0].update({"definitionName": "Newznab", "appProfileId": 0})
+            items[0].update({"definitionName": "Generic Newznab", "appProfileId": 0})
             items.insert(0, _schema_indexer(copy.deepcopy(indexer_fields), definitionName="NZBgeek"))
         return items
 
@@ -171,7 +171,13 @@ def create_fake_arr(kind: str, library: list[dict] | None = None) -> FastAPI:
         def make(resource=resource):
             @app.get(f"/api/{version}/{resource}")
             async def list_items():
-                return state[resource]
+                # Like the real apps, never return secrets.
+                items = copy.deepcopy(state[resource])
+                for item in items:
+                    for f in item.get("fields", []):
+                        if f.get("name") == "apiKey" and f.get("value"):
+                            f["value"] = "********"
+                return items
 
             @app.post(f"/api/{version}/{resource}")
             async def create(request: Request):
