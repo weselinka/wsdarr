@@ -283,3 +283,32 @@ async def test_sab_bad_numeric_params(client):
     assert resp.status_code == 200 and "queue" in resp.json()
     resp = await client.get("/sabnzbd/api", params={"mode": "history", "limit": "abc", "apikey": KEY})
     assert resp.status_code == 200 and "history" in resp.json()
+
+
+RSS_PARAMS = {
+    "t": "movie",
+    "cat": "2000,2010,2020,2030,2040,2045,2050,2060",
+    "extended": 1,
+    "apikey": KEY,
+    "offset": 0,
+    "limit": 100,
+}
+
+
+async def test_rss_falls_back_to_generic_queries(client, fake_ws):
+    # Radarr's indexer test (exactly as logged by Radarr) when Webshare ignores an empty query.
+    fake_ws.state.empty_query_results = False
+    found = items((await client.get("/api", params=RSS_PARAMS)).content)
+    assert found and all(i["title"].endswith("-WS") for i in found)
+    searched = [c[1] for c in fake_ws.state.calls if c[0] == "search"]
+    assert searched[0] == "" and len(searched) > 1
+
+
+async def test_rss_placeholder_when_webshare_returns_nothing(client, fake_ws):
+    fake_ws.state.catalog.clear()
+    found = items((await client.get("/api", params=RSS_PARAMS)).content)
+    assert len(found) == 1
+    assert found[0]["attrs"]["category"][0] == "2000"
+    # Searches (with a query) never return the placeholder.
+    resp = await client.get("/api", params={**RSS_PARAMS, "q": "Pelisky 1999"})
+    assert items(resp.content) == []

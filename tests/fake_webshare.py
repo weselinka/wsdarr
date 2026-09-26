@@ -64,6 +64,8 @@ def create_fake_app(
     app.state.catalog = catalog
     app.state.calls = []
     app.state.fail_links = set()
+    # The real Webshare may return nothing for an empty query; tests can switch to that.
+    app.state.empty_query_results = True
     expected_hash = webshare_password_hash(password, SALT)
 
     def err(code: str, message: str) -> Response:
@@ -96,6 +98,8 @@ def create_fake_app(
         app.state.calls.append(("search", what))
         tokens = _norm(what).split()
         hits = []
+        if not tokens and not app.state.empty_query_results:
+            return _xml("<status>OK</status><total>0</total>")
         for ident, (name, size) in catalog.items():
             name_tokens = _norm(name).split()
             if all(t in name_tokens for t in tokens):
