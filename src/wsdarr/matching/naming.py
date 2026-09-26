@@ -1,0 +1,85 @@
+"""Build scene-like release titles that Sonarr/Radarr parse reliably.
+
+Webshare file names are free-form (often Czech titles). When we know which item was searched
+for (``MediaContext.trusted``), the release is renamed to the title Sonarr/Radarr use, keeping
+only quality/language information extracted from the original name. Nothing is invented:
+tokens that are not present in the file name are left out.
+"""
+
+from __future__ import annotations
+
+import re
+
+from ..models import MediaContext
+from .parser import ParsedFile, strip_diacritics
+
+LANGUAGE_NAMES = {"cs": "Czech", "sk": "Slovak", "en": "English"}
+# Tokens Sonarr/Radarr's LanguageParser map to a language (case sensitive, see LanguageParser.cs).
+LANGUAGE_TOKENS = {"cs": "CZ", "sk": "SK"}
+
+
+def dotify(text: str) -> str:
+    text = strip_diacritics(text).replace("&", " and ")
+    text = re.sub(r"['’`´]", "", text)
+    text = re.sub(r"[^A-Za-z0-9]+", ".", text)
+    return text.strip(".")
+
+
+def quality_tokens(parsed: ParsedFile) -> list[str]:
+    toks: list[str] = []
+    if parsed.edition:
+        toks.append(parsed.edition)
+    if parsed.resolution:
+        toks.append(parsed.resolution)
+    if parsed.source:
+        toks.append(parsed.source)
+    if parsed.hdr:
+        toks.append(parsed.hdr)
+    if parsed.audio_codec:
+        toks.append(parsed.audio_codec + (parsed.audio_channels or ""))
+    if parsed.video_codec:
+        toks.append(parsed.video_codec)
+    return toks
+
+
+def language_tokens(parsed: ParsedFile) -> list[str]:
+    toks = [LANGUAGE_TOKENS[lang] for lang in parsed.audio_languages if lang in LANGUAGE_TOKENS]
+    if "cs" in parsed.subtitle_languages and "cs" not in parsed.audio_languages:
+        toks.append("CZ.SUBS")
+    elif "sk" in parsed.subtitle_languages and "sk" not in parsed.audio_languages:
+        toks.append("SK.SUBS")
+    return toks
+
+
+def newznab_languages(parsed: ParsedFile) -> list[str]:
+    return [LANGUAGE_NAMES[lang] for lang in parsed.audio_languages if lang in LANGUAGE_NAMES]
+
+
+def episode_token(parsed: ParsedFile, ctx: MediaContext | None = None) -> str:
+    season = parsed.season if parsed.season is not None else (ctx.season if ctx else None)
+    if season is None or not parsed.episodes:
+        return ""
+    return f"S{season:02d}" + "".join(f"E{e:02d}" for e in parsed.episodes)
+
+
+def build_release_title(parsed: ParsedFile, ctx: MediaContext | None = None, group: str = "WS") -> str:
+    kind = ctx.kind if ctx and ctx.kind != "unknown" else ("tv" if parsed.is_episode else "movie")
+    if ctx and ctx.trusted and ctx.canonical_title:
+        base = dotify(ctx.canonical_title)
+        year = ctx.year or parsed.year
+    else:
+        base = dotify(parsed.title or (parsed.title_variants[0] if parsed.title_variants else parsed.raw))
+        year = parsed.year
+
+    parts = [base]
+    if kind == "tv":
+        ep = episode_token(parsed, ctx)
+        if ep:
+            parts.append(ep)
+    elif year and not re.search(rf"(?:^|\.){year}$", base):
+        parts.append(str(year))
+
+    parts.extend(quality_tokens(parsed))
+    parts.extend(language_tokens(parsed))
+    title = ".".join(p for p in parts if p)
+    return f"{title}-{group}" if group else title
