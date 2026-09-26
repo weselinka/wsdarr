@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}wsdarr{% endblock %} · wsdarr</title>
+  <link rel="stylesheet" href="/ui/static/style.css">
+  <script src="/ui/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header>
+    <a class="brand" href="/ui/">ws<span>darr</span></a>
+    <nav>
+      {% set path = request.url.path %}
+      <a href="/ui/" class="{{ 'active' if path == '/ui/' }}">Přehled</a>
+      <a href="/ui/queue" class="{{ 'active' if path.startswith('/ui/queue') }}">Fronta</a>
+      <a href="/ui/search" class="{{ 'active' if path.startswith('/ui/search') }}">Hledání</a>
+      <a href="/ui/settings" class="{{ 'active' if path.startswith('/ui/settings') }}">Nastavení</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>wsdarr {{ version }} · Webshare.cz pro Sonarr / Radarr / Prowlarr</footer>
+</body>
+</html>

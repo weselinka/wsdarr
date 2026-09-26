@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Fronta{% endblock %}
+{% block content %}
+<div id="queue" hx-get="/ui/partials/queue" hx-trigger="every 2s" hx-swap="innerHTML">
+  {% include "_queue.html" %}
+</div>
+{% endblock %}

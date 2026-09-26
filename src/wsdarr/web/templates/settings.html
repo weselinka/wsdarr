@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Nastavení{% endblock %}
+{% block content %}
+<h1>Nastavení</h1>
+
+<section class="card">
+  <h2>Auto-setup</h2>
+  <p>Zaregistruje wsdarr jako <strong>SABnzbd download client</strong> v Sonarr/Radarr
+    {% if settings.prowlarr %}a jako <strong>Generic Newznab indexer</strong> v Prowlarru; po synchronizaci
+    naváže indexery v Sonarr/Radarr na klienta wsdarr.{% else %}a jako <strong>Newznab indexer</strong>
+    přímo v Sonarr/Radarr.{% endif %} Lze spouštět opakovaně.</p>
+  <button hx-post="/ui/setup" hx-target="#setup-report" hx-indicator="#setup-spinner">Spustit auto-setup</button>
+  <span id="setup-spinner" class="htmx-indicator muted">probíhá…</span>
+  <div id="setup-report"></div>
+</section>
+
+<section class="card">
+  <h2>Test spojení</h2>
+  <button hx-post="/ui/settings/test" hx-target="#test-report" hx-indicator="#test-spinner">Otestovat</button>
+  <span id="test-spinner" class="htmx-indicator muted">probíhá…</span>
+  <div id="test-report"></div>
+</section>
+
+<section class="card">
+  <h2>Aktuální konfigurace</h2>
+  <p class="muted small">Mění se proměnnými prostředí nebo v <code>{{ summary.config_dir }}/config.yml</code> (vyžaduje restart).</p>
+  <table class="kv">
+  {% for key, value in summary.items() %}
+    <tr><th>{{ key }}</th><td>
+      {% if value is mapping %}{{ value.name }} – {{ value.url }}
+      {% elif value is iterable and value is not string %}
+        {% for v in value %}{% if v is mapping %}{{ v.name }} – {{ v.url }} ({{ v.category }}){% else %}{{ v }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+      {% else %}{{ value }}{% endif %}
+    </td></tr>
+  {% endfor %}
+  </table>
+</section>
+{% endblock %}
