@@ -142,7 +142,11 @@ async def test_tv_search_download_and_import_flow(client, services, fake_sonarr,
     assert queue.json()["queue"]["slots"] == []
 
     # wsdarr nudges Sonarr to import right away
-    assert {"name": "RefreshMonitoredDownloads"} in fake_sonarr.state.data["commands"]
+    # (the job shows as completed just before the notification is sent, so wait for it)
+    async def notified():
+        return {"name": "RefreshMonitoredDownloads"} in fake_sonarr.state.data["commands"]
+
+    await wait_for(notified)
 
     # 5) After import Sonarr removes the item (RemoveFromHistory with del_files)
     resp = await client.get(
