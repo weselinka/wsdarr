@@ -1,4 +1,4 @@
-"""SABnzbd-compatible API (the subset Sonarr/Radarr/Prowlarr use).
+"""SABnzbd-compatible API (the subset Sonarr/Radarr use).
 
 Field names and formats follow Sonarr's SABnzbd client models
 (``SabnzbdQueueItem``, ``SabnzbdHistoryItem``, ``SabnzbdConfig``...).

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -19,6 +20,13 @@ from .webshare import WebshareError
 
 log = logging.getLogger(__name__)
 
+# Options of earlier versions that no longer do anything (Prowlarr and the auto-setup were removed).
+REMOVED_OPTIONS = ("AUTO_SETUP", "PROWLARR_URL", "PROWLARR_API_KEY")
+
+
+def removed_options(environ=os.environ) -> list[str]:
+    return [name for name in REMOVED_OPTIONS if environ.get(name)]
+
 
 async def _startup_tasks(svc: Services) -> None:
     if svc.webshare.has_credentials and not svc.webshare.token:
@@ -28,15 +36,6 @@ async def _startup_tasks(svc: Services) -> None:
             log.error("Webshare login failed: %s", exc)
     elif not svc.webshare.has_credentials:
         log.warning("WEBSHARE_USERNAME/WEBSHARE_PASSWORD not set - downloads will not work")
-    if svc.settings.auto_setup:
-        from .provision.setup import run_setup
-
-        try:
-            report = await run_setup(svc)
-            for line in report.lines():
-                log.info("setup: %s", line)
-        except Exception:
-            log.exception("Automatic setup failed")
 
 
 def create_app(settings: Settings | None = None, services: Services | None = None) -> FastAPI:
@@ -47,7 +46,14 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         svc = services or build_services(settings)
         app.state.svc = svc
         await svc.start()
-        log.info("wsdarr %s listening, API key: %s…", __version__, svc.api_key[:4])
+        log.info("wsdarr %s started", __version__)
+        log.info("API key for Sonarr/Radarr (indexer + download client): %s", svc.api_key)
+        log.info("Show it again any time with: docker exec wsdarr wsdarr apikey")
+        for name in removed_options():
+            log.warning(
+                "%s is no longer supported and is ignored: add wsdarr to Sonarr/Radarr by hand (see README)",
+                name,
+            )
         task = asyncio.create_task(_startup_tasks(svc))
         try:
             yield

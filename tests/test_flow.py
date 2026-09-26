@@ -196,7 +196,7 @@ async def test_rss_returns_results_for_indexer_test(client):
         params={"t": "tvsearch", "cat": "5030,5040", "extended": 1, "apikey": KEY, "offset": 0, "limit": 100},
     )
     found = items(resp.content)
-    assert found, "Sonarr/Prowlarr indexer test needs results for an empty query"
+    assert found, "the Sonarr/Radarr indexer test needs results for an empty query"
     assert all(i["attrs"]["category"][0] == "5000" for i in found)
 
 

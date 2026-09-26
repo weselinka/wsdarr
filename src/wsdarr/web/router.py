@@ -10,6 +10,7 @@ import shutil
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -65,10 +66,36 @@ def mount_static(app: FastAPI) -> None:
     app.mount("/ui/static", StaticFiles(directory=HERE / "static"), name="ui-static")
 
 
+def endpoint(public_url: str) -> dict:
+    """Host/port/SSL of ``PUBLIC_URL`` as they are entered in Sonarr/Radarr."""
+    parts = urlsplit(public_url)
+    ssl = parts.scheme == "https"
+    prefix = parts.path.strip("/")
+    try:
+        port = parts.port
+    except ValueError:  # e.g. "http://wsdarr:abc" – show something instead of failing the page
+        port = None
+    return {
+        "url": public_url.rstrip("/"),
+        "host": parts.hostname or "localhost",
+        "port": port or (443 if ssl else 80),
+        "ssl": ssl,
+        "url_base": "/".join(p for p in (prefix, "sabnzbd") if p),
+    }
+
+
 def render(request: Request, name: str, **context: Any) -> HTMLResponse:
     svc = request.app.state.svc
     return templates.TemplateResponse(
-        request, name, {"svc": svc, "settings": svc.settings, "version": __version__, **context}
+        request,
+        name,
+        {
+            "svc": svc,
+            "settings": svc.settings,
+            "version": __version__,
+            "endpoint": endpoint(svc.settings.public_url),
+            **context,
+        },
     )
 
 
@@ -94,8 +121,7 @@ async def webshare_status(svc, refresh: bool = False) -> dict:
 
 async def connection_status(svc, refresh: bool = False) -> list[dict]:
     results = []
-    clients = [*svc.arr_clients, *([svc.prowlarr] if svc.prowlarr else [])]
-    for client in clients:
+    for client in svc.arr_clients:
         key = f"arr:{client.name}"
         if refresh:
             svc.status.pop(key, None)
@@ -263,11 +289,3 @@ async def settings_test(request: Request):
         webshare=await webshare_status(svc, refresh=True),
         connections=await connection_status(svc, refresh=True),
     )
-
-
-@router.post("/setup", response_class=HTMLResponse)
-async def setup(request: Request):
-    from ..provision.setup import run_setup
-
-    report = await run_setup(request.app.state.svc)
-    return render(request, "_report.html", report=report)

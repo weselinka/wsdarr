@@ -51,11 +51,6 @@ def fake_radarr():
 
 
 @pytest.fixture
-def fake_prowlarr():
-    return create_fake_arr("prowlarr")
-
-
-@pytest.fixture
 def settings(tmp_path) -> Settings:
     return Settings(
         config_dir=tmp_path / "config",
@@ -67,7 +62,6 @@ def settings(tmp_path) -> Settings:
         webshare_base_url="http://ws/api/",
         sonarr=[ArrInstance(name="sonarr", url="http://sonarr:8989", api_key=API_KEY)],
         radarr=[ArrInstance(name="radarr", url="http://radarr:7878", api_key=API_KEY)],
-        prowlarr=ArrInstance(name="prowlarr", url="http://prowlarr:9696", api_key=API_KEY),
         min_file_size_mb=0,
         download_retries=2,
         max_concurrent_downloads=2,
@@ -75,10 +69,8 @@ def settings(tmp_path) -> Settings:
 
 
 @pytest.fixture
-async def services(settings, fake_ws, fake_sonarr, fake_radarr, fake_prowlarr):
-    router = HostRouter(
-        {"ws": fake_ws, "sonarr": fake_sonarr, "radarr": fake_radarr, "prowlarr": fake_prowlarr}
-    )
+async def services(settings, fake_ws, fake_sonarr, fake_radarr):
+    router = HostRouter({"ws": fake_ws, "sonarr": fake_sonarr, "radarr": fake_radarr})
     http = httpx.AsyncClient(transport=router)
     ws_http = httpx.AsyncClient(transport=router)
     dl_http = httpx.AsyncClient(transport=router)

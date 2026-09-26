@@ -1,4 +1,4 @@
-"""Command line: ``wsdarr serve | setup | search <query> | apikey``."""
+"""Command line: ``wsdarr serve | search <query> | apikey``."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import json
 import logging
+import sqlite3
 import sys
 
 from .config import Settings
@@ -46,15 +47,6 @@ async def _with_services(settings: Settings, func):
         svc.db.close()
 
 
-def cmd_setup(settings: Settings, args) -> int:
-    from .provision.setup import run_setup
-
-    report = asyncio.run(_with_services(settings, run_setup))
-    for line in report.lines():
-        print(line)
-    return 0 if report.ok else 1
-
-
 def cmd_search(settings: Settings, args) -> int:
     async def run(svc):
         ctx = await svc.resolver.resolve(args.kind, q=args.query)
@@ -69,10 +61,38 @@ def cmd_search(settings: Settings, args) -> int:
 
 
 def cmd_apikey(settings: Settings, args) -> int:
-    async def run(svc):
-        return svc.api_key
+    """Print the API key without starting anything.
 
-    print(asyncio.run(_with_services(settings, run)))
+    Meant for ``docker exec wsdarr wsdarr apikey`` next to the running server: the database is
+    opened read-only, so running as root inside the container cannot create files the server
+    (running as PUID) could not write later.
+    """
+    if settings.api_key:
+        print(settings.api_key)
+        return 0
+    if not settings.db_path.exists():
+        print(
+            f"No API key yet: start wsdarr first (database {settings.db_path} does not exist).",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        # A running server keeps the -wal/-shm files; reuse them read-only. Otherwise open the
+        # database as immutable so SQLite does not create them (they would be owned by root).
+        wal = settings.db_path.with_name(settings.db_path.name + "-wal")
+        mode = "mode=ro" if wal.exists() else "immutable=1"
+        conn = sqlite3.connect(f"file:{settings.db_path}?{mode}", uri=True)
+        try:
+            row = conn.execute("SELECT value FROM kv WHERE key = 'api_key'").fetchone()
+        finally:
+            conn.close()
+    except sqlite3.Error as exc:
+        print(f"Cannot read {settings.db_path}: {exc}", file=sys.stderr)
+        return 1
+    if not row:
+        print("No API key yet: start wsdarr first.", file=sys.stderr)
+        return 1
+    print(row[0])
     return 0
 
 
@@ -82,7 +102,6 @@ def main(argv: list[str] | None = None) -> int:
     serve = sub.add_parser("serve", help="run the web server (default)")
     serve.add_argument("--host")
     serve.add_argument("--port", type=int)
-    sub.add_parser("setup", help="register wsdarr in Prowlarr/Sonarr/Radarr")
     search = sub.add_parser("search", help="search Webshare like Sonarr/Radarr would (debugging)")
     search.add_argument("query")
     search.add_argument("--kind", choices=["tv", "movie", "unknown"], default="unknown")
@@ -94,9 +113,7 @@ def main(argv: list[str] | None = None) -> int:
     command = args.command or "serve"
     if command == "serve" and not hasattr(args, "host"):
         args.host, args.port = None, None
-    return {"serve": cmd_serve, "setup": cmd_setup, "search": cmd_search, "apikey": cmd_apikey}[command](
-        settings, args
-    )
+    return {"serve": cmd_serve, "search": cmd_search, "apikey": cmd_apikey}[command](settings, args)
 
 
 if __name__ == "__main__":

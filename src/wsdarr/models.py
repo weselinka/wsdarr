@@ -31,8 +31,8 @@ class MediaContext:
         """True when matched releases may be renamed to ``canonical_title``.
 
         Set for items identified by ID (Sonarr/Radarr/TMDB) as well as for text searches, where
-        the searched text itself is the title the caller (Sonarr's title search or a user in
-        Prowlarr) will map releases back with.
+        the searched text itself is the title the caller (Sonarr's title search or a user in the
+        web UI) will map releases back with.
         """
         return bool(self.canonical_title)
 

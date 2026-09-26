@@ -33,7 +33,7 @@
   <div class="card">
     <h2>Propojení</h2>
     {% if not connections %}
-      <p class="muted">Sonarr/Radarr/Prowlarr nejsou nastaveny.</p>
+      <p class="muted">Sonarr/Radarr nejsou nastaveny (SONARR_URL / RADARR_URL) – wsdarr funguje i bez nich, ale bez jejich názvů hledá hůř.</p>
     {% endif %}
     <ul class="plain">
     {% for c in connections %}
@@ -52,16 +52,24 @@
 </section>
 
 <section class="card">
-  <h2>Ruční napojení</h2>
-  <p class="muted">Auto-setup v <a href="/ui/settings">Nastavení</a> tohle udělá sám. Pro ruční nastavení:</p>
+  <h2>Nastavení v Sonarr / Radarr</h2>
+  <p class="muted">Hodnoty vycházejí z <code>PUBLIC_URL</code> = <code>{{ endpoint.url }}</code>
+    (adresa, na které wsdarr vidí Sonarr/Radarr). Podrobný návod je v README.</p>
+  <h3>1. Download client – Settings → Download Clients → + → SABnzbd</h3>
   <table class="kv">
-    <tr><th>Indexer (Prowlarr „Generic Newznab“ / Sonarr/Radarr „Newznab“)</th>
-        <td><code>{{ settings.public_url.rstrip('/') }}/newznab</code>, API Path <code>/api</code></td></tr>
-    <tr><th>Download client (SABnzbd)</th>
-        <td>Host/port z <code>{{ settings.public_url }}</code>, URL Base <code>sabnzbd</code>,
-            kategorie <code>{{ settings.tv_category }}</code> / <code>{{ settings.movie_category }}</code></td></tr>
-    <tr><th>API klíč (indexer i klient)</th>
-        <td><details><summary>zobrazit</summary><code>{{ svc.api_key }}</code></details></td></tr>
+    <tr><th>Name</th><td><code>wsdarr</code></td></tr>
+    <tr><th>Host / Port</th><td><code>{{ endpoint.host }}</code> / <code>{{ endpoint.port }}</code>{% if endpoint.ssl %}, Use SSL{% endif %}</td></tr>
+    <tr><th>URL Base</th><td><code>{{ endpoint.url_base }}</code></td></tr>
+    <tr><th>API Key</th><td><details><summary>zobrazit</summary><code>{{ svc.api_key }}</code></details></td></tr>
+    <tr><th>Category</th><td>Sonarr <code>{{ settings.tv_category }}</code>, Radarr <code>{{ settings.movie_category }}</code></td></tr>
+  </table>
+  <h3>2. Indexer – Settings → Indexers → + → Newznab (Custom)</h3>
+  <table class="kv">
+    <tr><th>Name</th><td><code>Webshare</code></td></tr>
+    <tr><th>URL</th><td><code>{{ endpoint.url }}/newznab</code></td></tr>
+    <tr><th>API Path</th><td><code>/api</code></td></tr>
+    <tr><th>API Key</th><td>stejný klíč jako u download clienta</td></tr>
+    <tr><th>Download Client (Advanced)</th><td><code>wsdarr</code></td></tr>
   </table>
 </section>
 {% endblock %}

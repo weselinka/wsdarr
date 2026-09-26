@@ -1,7 +1,7 @@
 """Application settings.
 
 Values are read (highest priority first) from environment variables, ``/config/config.yml``
-and the defaults below. Single Sonarr/Radarr/Prowlarr instances can be configured with the
+and the defaults below. Single Sonarr/Radarr instances can be configured with the
 ``SONARR_URL``/``SONARR_API_KEY`` style variables; multiple instances via the YAML file::
 
     sonarr:
@@ -30,7 +30,7 @@ from pydantic_settings import (
 
 
 class ArrInstance(BaseModel):
-    """A Sonarr, Radarr or Prowlarr instance."""
+    """A Sonarr or Radarr instance."""
 
     name: str
     url: str
@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     download_dir: Path = Path("/downloads")
     host: str = "0.0.0.0"
     port: int = 9797
-    # URL under which Sonarr/Radarr/Prowlarr reach wsdarr (used in NZB links and auto-setup).
+    # URL under which Sonarr/Radarr reach wsdarr (used in the NZB links of search results).
     public_url: str = "http://wsdarr:9797"
     api_key: str | None = Field(default=None, validation_alias=AliasChoices("wsdarr_api_key", "api_key"))
     log_level: str = "INFO"
@@ -78,11 +78,8 @@ class Settings(BaseSettings):
     sonarr_api_key: str | None = None
     radarr_url: str | None = None
     radarr_api_key: str | None = None
-    prowlarr_url: str | None = None
-    prowlarr_api_key: str | None = None
     sonarr: list[ArrInstance] = Field(default_factory=list)
     radarr: list[ArrInstance] = Field(default_factory=list)
-    prowlarr: ArrInstance | None = None
 
     # --- search --------------------------------------------------------------------------
     search_page_size: int = 100
@@ -102,16 +99,11 @@ class Settings(BaseSettings):
     # --- downloads -----------------------------------------------------------------------
     tv_category: str = "tv"
     movie_category: str = "movies"
-    extra_categories: list[str] = Field(default_factory=lambda: ["prowlarr"])
+    extra_categories: list[str] = Field(default_factory=list)
     max_concurrent_downloads: int = 2
     download_retries: int = 3
     speed_limit_kbps: int = 0
     notify_arr_on_complete: bool = True
-
-    # --- auto setup ----------------------------------------------------------------------
-    auto_setup: bool = False
-    setup_client_name: str = "wsdarr"
-    setup_indexer_name: str = "Webshare (wsdarr)"
 
     @model_validator(mode="after")
     def _merge_single_instances(self) -> Settings:
@@ -131,8 +123,6 @@ class Settings(BaseSettings):
             self.radarr.insert(
                 0, ArrInstance(name="radarr", url=self.radarr_url, api_key=self.radarr_api_key)
             )
-        if self.prowlarr is None and self.prowlarr_url and self.prowlarr_api_key:
-            self.prowlarr = ArrInstance(name="prowlarr", url=self.prowlarr_url, api_key=self.prowlarr_api_key)
         for inst in self.sonarr:
             inst.category = inst.category or self.tv_category
         for inst in self.radarr:
@@ -192,7 +182,6 @@ class Settings(BaseSettings):
             "tmdb_language": self.tmdb_language,
             "sonarr": [{"name": i.name, "url": i.url, "category": i.category} for i in self.sonarr],
             "radarr": [{"name": i.name, "url": i.url, "category": i.category} for i in self.radarr],
-            "prowlarr": {"name": self.prowlarr.name, "url": self.prowlarr.url} if self.prowlarr else None,
             "categories": self.categories,
             "max_concurrent_downloads": self.max_concurrent_downloads,
             "min_file_size_mb": self.min_file_size_mb,
